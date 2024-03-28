@@ -13,7 +13,8 @@ knitr::opts_chunk$set(eval = FALSE, error = FALSE, eval= FALSE)
 # Suppress Loading message when build the report 
 suppressPackageStartupMessages(
   {
-    
+#devtools::install_github("satijalab/azimuth", "seurat5")    
+library(Azimuth)
 library(recount)
 library(SummarizedExperiment)
 library(S4Vectors)
@@ -64,5 +65,11 @@ AZT_object <- CreateSeuratObject(counts = AZTdata , project = AZT_Project , min.
 ```{r}
 merged_objects <- merge(WT_object, y = AZT_object, add.cell.ids = c("WT", "AZT"), project = "Merged WT_AZT", 
                             merge.data = TRUE )
+#splited_object <- subset(merged_objects, nFeature_RNA > 1000)
+#two_layer_object <- RunAzimuth(splited_object, reference = "mousecortexref")
+test <- PercentageFeatureSet(WT_object, pattern = "Tmem119")
+
+VlnPlot(merged_objects. )
 ```
+
 

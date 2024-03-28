@@ -67,7 +67,7 @@ merged_objects <- merge(WT_object, y = AZT_object, add.cell.ids = c("WT", "AZT")
                             merge.data = TRUE )
 #splited_object <- subset(merged_objects, nFeature_RNA > 1000)
 #two_layer_object <- RunAzimuth(splited_object, reference = "mousecortexref")
-test <- PercentageFeatureSet(WT_object, pattern = "Tmem119")
+test <- PercentageFeatureSet(merged_objects, pattern = "Tmem119")
 
 VlnPlot(merged_objects. )
 ```

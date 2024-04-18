@@ -14,10 +14,11 @@ knitr::opts_chunk$set(eval = FALSE, error = FALSE, eval= FALSE)
 suppressPackageStartupMessages(
   {
 #devtools::install_github("satijalab/azimuth", "seurat5")    
-library(Azimuth)
+#library(Azimuth)
 library(recount)
 library(SummarizedExperiment)
 library(S4Vectors)
+library(TFBSTools)
 
 library(knitr)
 library(SummarizedExperiment)
@@ -55,21 +56,98 @@ AZTdata <- Read10X(data.dir = AZTdata.path, gene.column = 2, cell.column = 1, un
 # Creat Seurat objects
 
 ```{r}
-WT_object <- CreateSeuratObject(counts = WTdata , project = WT_Project , min.cells = 3, min.features = 300)
+WT_object <- Seurat:: CreateSeuratObject(counts = WTdata , project = WT_Project , min.cells = 3, min.features = 300)
 AZT_object <- CreateSeuratObject(counts = AZTdata , project = AZT_Project , min.cells = 3, min.features = 300)
 
 ```
 
 # Merge individual Seurat Objects into Single Seurat Object
 
+
 ```{r}
 merged_objects <- merge(WT_object, y = AZT_object, add.cell.ids = c("WT", "AZT"), project = "Merged WT_AZT", 
                             merge.data = TRUE )
-#splited_object <- subset(merged_objects, nFeature_RNA > 1000)
-#two_layer_object <- RunAzimuth(splited_object, reference = "mousecortexref")
-test <- PercentageFeatureSet(merged_objects, pattern = "Tmem119")
 
-VlnPlot(merged_objects. )
+```
+
+# Calculate the percentage of counts originating from a set of features "Visualize feature-feature relationships" and then Visualize QC metrics that are used to fillter cells 
+
+```{r}
+VlnPlot(merged_objects,features = c("nFeature_RNA", "nCount_RNA","percent.Ct","percent.Cx","percent.Tm","percent.P2r"))
+
+merged_objects[["percent.Ctss"]]<- PercentageFeatureSet(merged_objects, pattern = "^Ct")
+merged_objects[["percent.Cx3cr1"]]<- PercentageFeatureSet(merged_objects, pattern = "^Cx")
+merged_objects[["percent.Tmem119"]] <-PercentageFeatureSet(merged_objects, pattern = "^Tm")
+merged_objects[["percent.P2ry12"]] <- PercentageFeatureSet(merged_objects, pattern = "^P2r")
+
+p1 <- FeatureScatter(merged_objects, feature1 = "nFeature_RNA", feature2 =  "nCount_RNA")
+p2 <- FeatureScatter(merged_objects, feature1 = "percent.Ctss",   feature2 =  "nCount_RNA")
+p3 <- FeatureScatter(merged_objects, feature1 = "percent.Cx3cr1",   feature2 =  "nCount_RNA")
+p4 <- FeatureScatter(merged_objects, feature1 = "percent.Tmem119",   feature2 =  "nCount_RNA")
+p5 <- FeatureScatter(merged_objects, feature1 = "percent.P2ry12",  feature2 =  "nCount_RNA")
+
+p1 + p2 + p3 + p4 +p5
+#objWT_Azi <- RunAzimuth(WT_object , reference = "mousecortexref" )
+#objAZT_Azi <- RunAzimuth(AZT_object , reference = "mousecortexref" )
+#objAzi_merged <- merge(objWT_Azi, y = objAZT_Azi)
+
+#get cells IDs
+# i= 21 (PCA number = 21 ) # j-0.5 (Cluster resolution 0.5)
+# cells <- meta %>% filter(seurat_clusters %in% 0:11)
+
+
+#obj_norm <- NormalizeData(merged_objects) 
+#obj_varF <- FindVariableFeatures(obj_norm)
+#obj_scale <- ScaleData(obj_varF)
+#obj_PCA <- RunPCA(obj_scale)
+
+```
+
+
+
+
+# Normailization of the data 
+
+```{r}
+obj_PCA  <-  NormalizeData(merged_objects) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA()  
+
+```
+
+# Identification of highly vaiable features(Feature selction)
+we can show a subset of features that exhibit high cell-to-cell variation in dataset.
+
+```{r}
+merged_objects <-  FindVariableFeatures(obj_PCA, selection.method = "vst", nfeatures = 2000)
+top10 <- head(VariableFeatures(merged_objects), 10)
+plot1 <- VariableFeaturePlot(merged_objects)
+plot2 <-LabelPoints(plot = plot1, points = top10, repel = TRUE)
+plot1 + plot2
+```
+
+# Scaling the data
+we applied a linear transformation as the standard pre-processing step before to dimensional reduction done it, to shifts the expression of each gene and by that the mean expression across cells is Zero, and Scale the expression of each gene by that the variance across cells is 1.
+
+
+```{r}
+ all.genes <- rownames(merged_objects)
+
+```
+
+
+# clustering this dataset which would return prredominantly batch-specific clusters
+
+```{r}
+obj_neighbours<- FindNeighbors(obj_PCA, dims = 1:30, reduction = "pca")
+obj_clustered <- FindClusters(obj_neighbours, resolution = 2, cluster.name = "integrated_clusters")
+obj_umap <- RunUMAP(obj_clustered, dims = 1:30, reduction = "pca", reduction.name = "umap.integrated")
+DimPlot(obj_umap, reduction = "umap.integrated", group.by = c("orig.ident", "integrated_clusters", "seurat_clusters"))
+
+#p1 <-  DimPlot(objWT_Azi , group.by = "predicted.subclass.score", label = TRUE, label.size = 3) + NoLegend() 
+Idents(obj_umap) <-"predicted.celltype.12"
+p1 <- FeaturePlot(obj_umap, features =  c("Tmem119", "Ctss", "Cx3cr1", "P2ry12"), min.cutoff = "q4") 
+VlnPlot(obj_umap, features =c("Tmem119", "Ctss", "Cx3cr1", "P2ry12") )
+
+
 ```
 
 

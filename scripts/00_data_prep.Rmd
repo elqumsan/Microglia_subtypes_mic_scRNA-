@@ -94,6 +94,10 @@ p4 <- FeatureScatter(merged_objects, feature1 = "percent.Tmem119",   feature2 = 
 p5 <- FeatureScatter(merged_objects, feature1 = "percent.P2ry12",  feature2 =  "nCount_RNA")
 
 p1 + p2 + p3 + p4 +p5
+
+png( filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/scatter_QC.png", width = 800 , height = 600)  
+  p1 + p2 + p3 + p4 +p5
+ dev.off()
 #objWT_Azi <- RunAzimuth(WT_object , reference = "mousecortexref" )
 #objAZT_Azi <- RunAzimuth(AZT_object , reference = "mousecortexref" )
 #objAzi_merged <- merge(objWT_Azi, y = objAZT_Azi)
@@ -130,6 +134,10 @@ top10 <- head(VariableFeatures(merged_objects), 10)
 plot1 <- VariableFeaturePlot(merged_objects)
 plot2 <-LabelPoints(plot = plot1, points = top10, repel = TRUE)
 plot1 + plot2
+png(filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/High_variableFeature.png", width = 800 , height = 600)
+plot1 + plot2
+dev.off()
+
 ```
 
 # Scaling the data
@@ -145,7 +153,7 @@ scale_data <- ScaleData(merged_objects, features = all.genes)
 ```
 
 
-# clustering this dataset which would return prredominantly batch-specific clusters
+# clustering this dataset which would return predominantly batch-specific clusters
 
 ```{r}
 obj_neighbours<- FindNeighbors(obj_PCA, dims = 1:30, reduction = "pca")

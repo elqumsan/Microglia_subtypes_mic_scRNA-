@@ -100,7 +100,7 @@ p4 <- FeatureScatter(merged_objects, feature1 = "percent.Tmem119",   feature2 = 
 p5 <- FeatureScatter(merged_objects, feature1 = "percent.P2ry12",  feature2 =  "nCount_RNA")
 
 p1 + p2 + p3 + p4 +p5
-
+#dev.off()
 png( filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/scatter_QC.png", width = 800 , height = 600)  
   p1 + p2 + p3 + p4 +p5
  dev.off()
@@ -161,34 +161,56 @@ scale_data <- ScaleData(merged_objects , vars.to.regress = "percent.mt")
 ```
 
 # we can visualizing both cells and features that define the PCA 
-we can explore of the primary source of hetrogeneity in our datawe trying to decide which PCs to include for further downstream analysis, by which both cells and features are ordered accoording to their PCA scores. this for exploring correlated feature set
+we can explore of the primary source of heterogeneity in our data we trying to decide which PCs to include for further downstream analysis, by which both cells and features are ordered according to their PCA scores. this for exploring correlated feature set
 ```{r}
-VizDimLoadings(scale_data, dims = 1:2 , reduction = "pca")
+DimReduction = VizDimLoadings(scale_data, dims = 1:2 , reduction = "pca")
 
-png(filename ="/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/DimReduction.png", width = 800 , height = 600)
-VizDimLoadings(scale_data, dims = 1:2 , reduction = "pca")
+ggsave(filename = paste( "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/","DimReduction.png", sep = ""), plot = DimReduction, dpi = 300)
 
-while(!is.null(dev.list())) dev.off()
+#png(filename ="/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/DimReduction.png", width = 800 , height = 600)
+#print(DimReduction)
+#while(!is.null(dev.list())) dev.off()
 
-png(filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/DimmPlot.png", width = 800, height = 600)
-DimPlot(scale_data, reduction = "pca") + NoLegend()
-dev.off()
 
-png(filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/DimHeatmap.png", width = 800, height = 600)
-DimHeatmap(scale_data, dims = 1:3, cells = 500 , balanced = TRUE)
+#png(filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/DimmPlot.png", width = 800, height = 600)
+DimPlot = DimPlot(scale_data, reduction = "pca" ) + NoLegend()
+#while(!is.null(dev.list())) dev.off()
+
+ggsave(filename = paste("/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/", "DimPlot.png", sep = ""), plot = DimPlot, dpi=300)
+
+
+#png(filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/DimHeatmap.png", width = 800, height = 600)
+p = matrix()
+p <- DimHeatmap(scale_data, dims = 1:3, cells = 500 , balanced = TRUE)
+ggsave(filename = paste("/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/", "DimHeatmap.png", sep = ""), plot =  DimHeatmap(scale_data, dims = 1:2, cells = 500 , balanced = TRUE), dpi = 300)
+
 while(!is.null(dev.list())) dev.off() 
   
 ```
+# Elbow Plot 
+Is a ranking of principle component based on the precentage of variance explained by each one
+```{r}
+elbow = ElbowPlot(scale_data)
+ggsave(filename = paste("/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/", "elbow.png", sep = ""), plot = elbow, dpi = 300 )
+
+```
+
 
 
 # clustering this dataset which would return predominantly batch-specific clusters
+The principle of clustering here is distance by k-nearest neighbour (KNN)graph with edges drawn between cells with similar feature expression patterns, and then attempt to partition this graph into highly interconnected communities, that can happened by euclidean distance in PCA sapce, and refine the edge weights between any two cells based on the shared overlap in their local neighborhoods (jaccard similarity). and then clustering process could been done by apply modularity optimization techniques such as the Louvain algorithm or SLM to iteratively group cells together, with the goal of optimizing standard modularity function,
+(UMAP/tSNE) are non-linear dimensional reduction techniques, to visualize and explore the dataset, abd the goal of these algorithms is to learn underlying sturcture in dataset, in order to place similar cells together in low-dimensional space. therefore, cells that are grouped together within graph-based clusters.these methods aim to preserve local distance in dataset(ensuring that cells with very similar gene expression profiles co-localize), but often do not preserve more global relationships 
+
 
 ```{r}
 obj_neighbours<- FindNeighbors(obj_PCA, dims = 1:30, reduction = "pca")
 obj_clustered <- FindClusters(obj_neighbours, resolution = 2, cluster.name = "integrated_clusters")
 obj_umap <- RunUMAP(obj_clustered, dims = 1:30, reduction = "pca", reduction.name = "umap.integrated")
-DimPlot(obj_umap, reduction = "umap.integrated", group.by = c("orig.ident", "integrated_clusters", "seurat_clusters"))
 
+png(filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/DimPlot2.png", width = 800 , height = 600)
+DimPlot(obj_umap, reduction = "umap.integrated", group.by = c("orig.ident", "integrated_clusters", "seurat_clusters"))
+while(!is.null(dev.list())) dev.off()
+  
 #p1 <-  DimPlot(objWT_Azi , group.by = "predicted.subclass.score", label = TRUE, label.size = 3) + NoLegend() 
 Idents(obj_umap) <-"predicted.celltype.12"
 p1 <- FeaturePlot(obj_umap, features =  c("Tmem119", "Ctss", "Cx3cr1", "P2ry12"), min.cutoff = "q4") 

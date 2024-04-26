@@ -180,7 +180,7 @@ ggsave(filename = paste("/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-
 
 
 #png(filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/DimHeatmap.png", width = 800, height = 600)
-p = matrix()
+
 p <- DimHeatmap(scale_data, dims = 1:3, cells = 500 , balanced = TRUE)
 ggsave(filename = paste("/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/", "DimHeatmap.png", sep = ""), plot =  DimHeatmap(scale_data, dims = 1:2, cells = 500 , balanced = TRUE), dpi = 300)
 
@@ -199,7 +199,7 @@ ggsave(filename = paste("/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-
 
 # clustering this dataset which would return predominantly batch-specific clusters
 The principle of clustering here is distance by k-nearest neighbour (KNN)graph with edges drawn between cells with similar feature expression patterns, and then attempt to partition this graph into highly interconnected communities, that can happened by euclidean distance in PCA sapce, and refine the edge weights between any two cells based on the shared overlap in their local neighborhoods (jaccard similarity). and then clustering process could been done by apply modularity optimization techniques such as the Louvain algorithm or SLM to iteratively group cells together, with the goal of optimizing standard modularity function,
-(UMAP/tSNE) are non-linear dimensional reduction techniques, to visualize and explore the dataset, abd the goal of these algorithms is to learn underlying sturcture in dataset, in order to place similar cells together in low-dimensional space. therefore, cells that are grouped together within graph-based clusters.these methods aim to preserve local distance in dataset(ensuring that cells with very similar gene expression profiles co-localize), but often do not preserve more global relationships 
+(UMAP/tSNE) are non-linear dimensional reduction techniques, to visualize and explore the dataset, but the goal of these algorithms is to learn underlying sturcture in dataset, in order to place similar cells together in low-dimensional space. therefore, cells that are grouped together within graph-based clusters.these methods aim to preserve local distance in dataset(ensuring that cells with very similar gene expression profiles co-localize), but often do not preserve more global relationships. But we should take in our considerations to avoid biological conclusions solely on the basis of visualization techniques  
 
 
 ```{r}
@@ -207,9 +207,12 @@ obj_neighbours<- FindNeighbors(obj_PCA, dims = 1:30, reduction = "pca")
 obj_clustered <- FindClusters(obj_neighbours, resolution = 2, cluster.name = "integrated_clusters")
 obj_umap <- RunUMAP(obj_clustered, dims = 1:30, reduction = "pca", reduction.name = "umap.integrated")
 
-png(filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/DimPlot2.png", width = 800 , height = 600)
-DimPlot(obj_umap, reduction = "umap.integrated", group.by = c("orig.ident", "integrated_clusters", "seurat_clusters"))
-while(!is.null(dev.list())) dev.off()
+cluster_plot = DimPlot(obj_umap, reduction = "umap.integrated", group.by = c("orig.ident", "integrated_clusters", "seurat_clusters"))
+
+#png(filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/DimPlot2.png", width = 800 , height = 600)
+ggsave(filename = paste("/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/", "cluster_plot.png", sep = ""), plot = cluster_plot, dpi = 300)
+#DimPlot(obj_umap, reduction = "umap.integrated", group.by = c("orig.ident", "integrated_clusters", "seurat_clusters"))
+#while(!is.null(dev.list())) dev.off()
   
 #p1 <-  DimPlot(objWT_Azi , group.by = "predicted.subclass.score", label = TRUE, label.size = 3) + NoLegend() 
 Idents(obj_umap) <-"predicted.celltype.12"
@@ -219,4 +222,49 @@ VlnPlot(obj_umap, features =c("Tmem119", "Ctss", "Cx3cr1", "P2ry12") )
 
 ```
 
+# Identifying differentially epressed features
+we looking to identifying clustering via differential expression (DE), by identifies positive and negative markers of a single cluster, compared to all other cells.
+we can use several tests for differential expression. e.g. the ROC test returns the classification power for individual marker ranging from 0-random, to 1-perfect.
+and then we show expression probability distributions across clusters, visualize feature expression. 
+```{r}
+Joint_layers_obj <- JoinLayers(obj_umap)
+cluster2_markers <- FindMarkers(object = Joint_layers_obj, ident.1 = 2)
+
+
+object_all_markers <- FindAllMarkers(object = Joint_layers_obj, only.pos = TRUE)
+object_all_markers %>% group_by(cluster) %>% dplyr::filter(avg_log2FC > 1)
+
+cluster0_markers <- FindMarkers(object = Joint_layers_obj, ident.1 = 0, logfc.threshold = 0.25, test.use = "roc", only.pos = TRUE)
+
+#Cluster_tree <- BuildClusterTree(object = obj_clustered)
+
+#cluster_markers <- FindMarkers(object = Cluster_tree , ident.1 =   )
+VlnPlot(Joint_layers_obj, features = c("Tmem119", "Ctss", "Cx3cr1", "P2ry12") ) 
+FeaturePlot(Joint_layers_obj, features = c("Tmem119", "Ctss", "Cx3cr1", "P2ry12"))
+
+```
+
+# we find the epression heatmap for given cells and featurs
+We are plotting the top 20 markers for each cluster
+
+```{r}
+object_all_markers %>%
+  group_by(cluster) %>%
+  dplyr::filter(avg_log2FC > 1) %>%
+  slice_head(n = 10) %>%
+  ungroup() -> top10
+DoHeatmap(Joint_layers_obj, features = top10$gene) + NoLegend()
+
+```
+
+# Assigning cell type identity to clusters
+We had used canonical markers to easily match the unbiased clustering to known cell types
+```{r}
+new_cluster_ides <-  c("Naive CD4 T", "CD14+ Mono", "Memory CD4 T", "B", "CD8 T", "FCGR3A+ Mono","NK", "DC", "Platelet")
+names(new_cluster_ides) <-levels(Joint_layers_obj)[1:9]
+
+Joint_layers_obj <-RenameIdents(Joint_layers_obj[1:9],  new_cluster_ides)
+
+DimPlot(Joint_layers_obj, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+```
 

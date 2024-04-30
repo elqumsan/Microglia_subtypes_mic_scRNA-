@@ -1,12 +1,32 @@
 ---
-title: "Create Seurat object"
-output: 
+title: "Identify cell types/subtypes of microglia that are dysregulated by induced the antiretroviral drugs"
+author: "Mustafa AbuElqumsan, Xin Liu, and Prof. Shau-Jun TANG "
+date: '`r Sys.Date()`'
+output:
+  pdf_document:
+    fig_caption: yes
+    highlight: zenburn
+    toc: yes
+    toc_depth: 3
   html_document:
-    keep_md: true
+    code_folding: hide
+    fig_caption: yes
+    highlight: zenburn
+    theme: cerulean
+    toc: yes
+    toc_depth: 3
+    toc_float: true
+  word_document: default
+  bookdown::html_document2: default 
+# bibliography: Bibliography.bib
+biblio-style: "apalike"
+link-citations: yes
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r}
-knitr::opts_chunk$set(eval = FALSE, error = FALSE, eval= FALSE)
+knitr::opts_chunk$set(error = FALSE, include=FALSE,  eval=FALSE, echo=TRUE, warning=FALSE)
 ```
 
 ```{r}
@@ -79,7 +99,7 @@ By this step we had filtered cells based on our criteria :-
 * Similarly, the total number of molecules detected within a cell.
 * Percentage of reads that map to the mitochondrial genome
 
-```{r}
+```{r figs,echo= TRUE, fig.width= 7, fig.height=6 ,fig.show='animate'}
 merged_objects[["percent.mt"]]<- PercentageFeatureSet(merged_objects, pattern = "^MT-")
 
 merged_objects[["percent.Ctss"]]<- PercentageFeatureSet(merged_objects, pattern = "^Ct")
@@ -99,7 +119,9 @@ p3 <- FeatureScatter(merged_objects, feature1 = "percent.Cx3cr1",   feature2 =  
 p4 <- FeatureScatter(merged_objects, feature1 = "percent.Tmem119",   feature2 =  "nCount_RNA")
 p5 <- FeatureScatter(merged_objects, feature1 = "percent.P2ry12",  feature2 =  "nCount_RNA")
 
-p1 + p2 + p3 + p4 +p5
+
+
+
 #dev.off()
 png( filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/scatter_QC.png", width = 800 , height = 600)  
   p1 + p2 + p3 + p4 +p5
@@ -121,6 +143,10 @@ png( filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/finding
 ```
 
 
+```{r }
+p1 + p2 + p3 + p4 +p5
+
+```
 
 
 # Normailization of the data 
@@ -205,7 +231,7 @@ The principle of clustering here is distance by k-nearest neighbour (KNN)graph w
 ```{r}
 obj_neighbours<- FindNeighbors(obj_PCA, dims = 1:30, reduction = "pca")
 obj_clustered <- FindClusters(obj_neighbours, resolution = 2, cluster.name = "integrated_clusters")
-obj_umap <- RunUMAP(obj_clustered, dims = 1:30, reduction = "pca", reduction.name = "umap.integrated")
+obj_umap <- RunUMAP(obj_clustered, dims = 1:15, reduction = "pca", reduction.name = "umap.integrated")
 
 cluster_plot = DimPlot(obj_umap, reduction = "umap.integrated", group.by = c("orig.ident", "integrated_clusters", "seurat_clusters"))
 
@@ -215,7 +241,7 @@ ggsave(filename = paste("/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-
 #while(!is.null(dev.list())) dev.off()
   
 #p1 <-  DimPlot(objWT_Azi , group.by = "predicted.subclass.score", label = TRUE, label.size = 3) + NoLegend() 
-Idents(obj_umap) <-"predicted.celltype.12"
+# Idents(obj_umap) <-"predicted.celltype.12"
 p1 <- FeaturePlot(obj_umap, features =  c("Tmem119", "Ctss", "Cx3cr1", "P2ry12"), min.cutoff = "q4") 
 VlnPlot(obj_umap, features =c("Tmem119", "Ctss", "Cx3cr1", "P2ry12") )
 
@@ -239,21 +265,25 @@ cluster0_markers <- FindMarkers(object = Joint_layers_obj, ident.1 = 0, logfc.th
 #Cluster_tree <- BuildClusterTree(object = obj_clustered)
 
 #cluster_markers <- FindMarkers(object = Cluster_tree , ident.1 =   )
-VlnPlot(Joint_layers_obj, features = c("Tmem119", "Ctss", "Cx3cr1", "P2ry12") ) 
-FeaturePlot(Joint_layers_obj, features = c("Tmem119", "Ctss", "Cx3cr1", "P2ry12"))
+VlnPlot = VlnPlot(Joint_layers_obj, features = c("Tmem119", "Ctss", "Cx3cr1", "P2ry12") ) 
+feature_plot  = FeaturePlot(Joint_layers_obj, features = c("Tmem119", "Ctss", "Cx3cr1", "P2ry12"))
+ggsave(filename = paste( "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/", "VlnPlot.png", sep = ""), plot = VlnPlot, dpi = 300 )
+ggsave(filename = paste("/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/", "FeaturePlot.png", sep = ""), plot = feature_plot, dpi = 300 )
 
 ```
 
 # we find the epression heatmap for given cells and featurs
 We are plotting the top 20 markers for each cluster
 
-```{r}
+```{r , eval=FALSE, echo=FALSE}
 object_all_markers %>%
   group_by(cluster) %>%
   dplyr::filter(avg_log2FC > 1) %>%
   slice_head(n = 10) %>%
   ungroup() -> top10
-DoHeatmap(Joint_layers_obj, features = top10$gene) + NoLegend()
+do_heat_map = DoHeatmap(Joint_layers_obj, features = top10$gene) + NoLegend()
+do_heat_map
+ggsave(paste(filename = paste( "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/", "heatMap.png", sep = ""), plot =  do_heat_map, dpi= 300 ))
 
 ```
 
@@ -265,6 +295,11 @@ names(new_cluster_ides) <-levels(Joint_layers_obj)[1:9]
 
 Joint_layers_obj <-RenameIdents(Joint_layers_obj[1:9],  new_cluster_ides)
 
-DimPlot(Joint_layers_obj, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+DimPlot(Joint_layers_obj, label = TRUE, pt.size = 0.5) + NoLegend()
+
+Dim_cells_plot = DimPlot(Joint_layers_obj, label = TRUE, label.size = 4.5) + xlab("UMAP 1") + ylab("UMAP 2") + theme(axis.title = element_text(size = 18) +
+  guide_legend(override.aes = list(size = 10)))
+ggsave( paste( filename = "/shared/home/mabuelqumsan/Microglia_subtypes_mic_scRNA-/findings/", "Dim_cells_plot.png", sep = "" ), plot = Dim_cells_plot, dpi = 300)
+
 ```
 

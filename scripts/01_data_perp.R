@@ -1,0 +1,64 @@
+
+library(recount)
+library(SummarizedExperiment)
+library(S4Vectors)
+
+library(shiny)
+library(bslib)
+library(ggExtra)
+
+library(knitr)
+library(SummarizedExperiment)
+library(SeuratObject)
+library(Seurat)
+library(ggplot2)
+library(SingleR)
+library(dplyr)
+library(celldex)
+library(RColorBrewer)
+library(SingleCellExperiment)
+library(patchwork) 
+library("BiocManager")
+library("glmGamPoi")
+
+
+Wtdata.path <- ("/shared/ifbstor1/projects/rnaseqmva/TANG_Lab/Xin_data/Veh/")
+WT_Project <- "WT_data_Microglia"
+AZTdata.path <- ("/shared/ifbstor1/projects/rnaseqmva/TANG_Lab/Xin_data/AZT/")
+AZT_Project <-  "AZT_data_Microglia"
+
+WTdata  <- Read10X(data.dir = Wtdata.path, gene.column = 2, cell.column = 1, unique.features = T, strip.suffix = F)
+AZTdata <- Read10X(data.dir = AZTdata.path, gene.column = 2, cell.column = 1, unique.features = T, strip.suffix = F)
+WT_object <-  CreateSeuratObject(counts = WTdata, project = "Microglia subtypes_WT", min.cells = 3, min.features = 300)
+AZT_object <- CreateSeuratObject(counts = AZTdata, project = "Microglia subtypes_AZT", min.cells = 3, min.features = 300)
+
+integrated_object <-  merge(WT_object, y = AZT_object, add.cell.ids = c("WT", "AZT"), merge.data= TRUE)
+object.ref <- subset(integrated_object, orig.ident %in% c("Microglia subtypes_WT" , "Microglia subtypes_AZT"))
+
+cells <- WhichCells(object.ref)
+
+CellsMeta = object.ref@meta.data
+randomnumbers <- runif(25167, 0.0, 1.1)
+CellsMeta["Gene_IDs"] <- randomnumbers
+head(CellsMeta)
+cellsMetaTrim <- subset(CellsMeta, select = c("Gene_IDs"))
+object.ref <-AddMetaData(object.ref, cellsMetaTrim)
+head(object.ref)
+VlnPlot(object.ref, c("nCount_RNA", "Gene_IDs"), ncol = 2)
+
+#object.ref[["RNA"]] <- split( object.ref[["RNA"]] ,f =  object.ref$seurat_clusters )
+
+object.ref <- NormalizeData(object.ref)
+object.ref <- FindVariableFeatures(object.ref) 
+object.ref <-ScaleData(object.ref)
+object.ref <-RunPCA(object.ref)
+object.ref<-FindNeighbors(object.ref, dims = 1:30)
+object.ref <-FindClusters(object.ref)
+
+object.ref <-RunUMAP(object.ref, dims = 1:30)
+
+DimPlot(object.ref, group.by = c("orig.ident", "seurat_clusters"))
+
+#meta.all <- integrated_object %>% 
+#  dplyr::rename(Integrated_object = "integrated_object")  %>%
+#  select(ID_prefix, sample_ID, Cust_ID, Exp_batch)

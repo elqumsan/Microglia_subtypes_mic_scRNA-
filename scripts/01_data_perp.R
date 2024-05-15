@@ -20,6 +20,11 @@ library(SingleCellExperiment)
 library(patchwork) 
 library("BiocManager")
 library("glmGamPoi")
+library('enrichCellMarkers')
+
+source("../Microglia_subtypes_mic_scRNA-/Functions/norm_scale_dim_cluster_qc.R")
+
+
 
 
 Wtdata.path <- ("/shared/ifbstor1/projects/rnaseqmva/TANG_Lab/Xin_data/Veh/")
@@ -35,6 +40,18 @@ AZT_object <- CreateSeuratObject(counts = AZTdata, project = "Microglia subtypes
 integrated_object <-  merge(WT_object, y = AZT_object, add.cell.ids = c("WT", "AZT"), merge.data= TRUE)
 object.ref <- subset(integrated_object, orig.ident %in% c("Microglia subtypes_WT" , "Microglia subtypes_AZT"))
 
+#VlnPlot(object.ref, features = c("nFeature_RNA","nCount_RNA" ) )
+
+QC_plot(object.ref@meta.data)
+
+######### ribosomal gene
+grep( pattern = "^Rp[s1][[:digit]]", x = rownames(integrated_object@assays$RNA),value = TRUE)
+results = CMenrich(gene.list = c('Sall1', 'Hexb', 'Fcrls', 'Gpr43', 'Cx3cr1', 'Tmem119', 'Trem2', 'P2ry12', 'Mertk', 'Pros1','Siglech'), species = 'mouse' )
+
+
+##################################
+what_dims(object_type = WT_object, path = Wtdata.path )
+
 cells <- WhichCells(object.ref)
 
 CellsMeta = object.ref@meta.data
@@ -47,13 +64,14 @@ head(object.ref)
 VlnPlot(object.ref, c("nCount_RNA", "Gene_IDs"), ncol = 2)
 
 #object.ref[["RNA"]] <- split( object.ref[["RNA"]] ,f =  object.ref$seurat_clusters )
+#################
 
 object.ref <- NormalizeData(object.ref)
 object.ref <- FindVariableFeatures(object.ref) 
 object.ref <-ScaleData(object.ref)
 object.ref <-RunPCA(object.ref)
 object.ref<-FindNeighbors(object.ref, dims = 1:30)
-object.ref <-FindClusters(object.ref)
+object.ref <-FindClusters(object.ref, resolution = 0.05)
 
 object.ref <-RunUMAP(object.ref, dims = 1:30)
 

@@ -6,6 +6,7 @@ library(S4Vectors)
 library(shiny)
 library(bslib)
 library(ggExtra)
+library(purrr)
 
 library(knitr)
 library(SummarizedExperiment)
@@ -23,7 +24,7 @@ library("glmGamPoi")
 library('enrichCellMarkers')
 
 source("../Microglia_subtypes_mic_scRNA-/Functions/norm_scale_dim_cluster_qc.R")
-
+source("../Microglia_subtypes_mic_scRNA-/scripts/02_QC_starin_split.R")
 
 
 
@@ -38,11 +39,22 @@ WT_object <-  CreateSeuratObject(counts = WTdata, project = "Microglia subtypes_
 AZT_object <- CreateSeuratObject(counts = AZTdata, project = "Microglia subtypes_AZT", min.cells = 3, min.features = 300)
 
 integrated_object <-  merge(WT_object, y = AZT_object, add.cell.ids = c("WT", "AZT"), merge.data= TRUE)
-object.ref <- subset(integrated_object, orig.ident %in% c("Microglia subtypes_WT" , "Microglia subtypes_AZT"))
+# object.ref <- subset(integrated_object, orig.ident %in% c("Microglia subtypes_WT" , "Microglia subtypes_AZT"))
 
+strain <- c("Microglia subtypes_WT", "Microglia subtypes_AZT")
+cols =  c("#888888", "#00AA00")
+
+integrated_object[["Strain"]] <- factor(integrated_object@meta.data$orig.ident, levels = strain)
+integrated_object$Strain <- str_replace(integrated_object$Strain,pattern = "Microglia subtypes_WT", replacement = "WT" )
+integrated_object$Strain <- str_replace(integrated_object$Strain, pattern ="Microglia subtypes_AZT", replacement = "AZT" )
+meta <- integrated_object@meta.data
+
+meta_tidy <- meta %>% 
+  select(orig.ident,nCount_RNA, nFeature_RNA, Strain) %>%
+  gather(-orig.ident, -Strain ,key= "QC", value="value" )
 #VlnPlot(object.ref, features = c("nFeature_RNA","nCount_RNA" ) )
 
-QC_plot(object.ref@meta.data)
+map(~QC_plot(integrated_object@meta.data))
 
 ######### ribosomal gene
 grep( pattern = "^Rp[s1][[:digit]]", x = rownames(integrated_object@assays$RNA),value = TRUE)

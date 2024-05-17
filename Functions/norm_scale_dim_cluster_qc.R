@@ -12,9 +12,9 @@ what_dims <- function(object_type , path,  .){
 
 # QC: Violin plot of nfeatures_RNA, percentmt, for ecah cluster
 
-QC_plot <- function(data ){
+QC_plot <- function(data, y ){
   
-  p <- ggplot(data, aes_string(x= "seurat_clusters" , y=120 , colors= "seurat_clusters")) + 
+  p <- ggplot(data, aes_string(x= "seurat_clusters" , y=y , colors= "seurat_clusters")) + 
     geom_violin()+
     geom_boxplot(width= 0.07, outlier.shape = NA, color = "black", alpha= 0.7) +
     theme_bw()+

@@ -22,6 +22,22 @@ AZT_object <- CreateSeuratObject(counts = AZTdata, project = "Microglia subtypes
 
 integrated_object <-  merge(WT_object, y = AZT_object, add.cell.ids = c("WT", "AZT"), merge.data= TRUE)
 
+integrated_object <- integrated_object %>% NormalizeData()  %>% FindVariableFeatures()  %>% ScaleData()  %>% RunPCA() %>% 
+                   FindNeighbors(dims = 1:30 , reduction = "pca") %>%
+                   FindClusters(resolution = 0.05) 
+  
+
+
+  
+              
+# integrated_object <-integrated_object %>% RunUMAP(dims = 1:30 , reduction.name = "umap")
+
+
+
+#integrated_object <- RunPCA(integrated_object)
+#integrated_object <-FindNeighbors(integrated_object, dims = 1:30)
+#cluster_object <- FindClusters(integrated_object,resolution = 0.05)
+
 strain <- c("Microglia subtypes_WT", "Microglia subtypes_AZT")
 cols =  c("#888888", "#00AA00")
 
@@ -94,3 +110,15 @@ QC_plot <- function(data){
             N_cell = n())
 
 
+##### Plot WT/AZT expression levels from single-cell RNA-seq regardless of cluster
+integrated_object$Genotype <- factor(integrated_object@meta.data$Strain, levels = c("WT", "AZT"))
+integrated_object$clusters <- factor(integrated_object$seurat_clusters, levels = c("1","2","3","4","5","6","7"))
+VlnPlot(integrated_object, features = c('P2ry12','Cx3cr1',"Ctss",'Tmem119', "Itgam"), pt.size = 0, split.by = "Genotype")
+theme(legend.position = "right",
+      axis.title = element_blank(),
+      axis.text.x = element_text(size = 10, face = "bold"),
+      axis.text.y = element_text(size = 10),
+      title = element_text(size = 10, family = "Arial")
+      )
+
+ggsave(filename = "QC_Itgam_single_cell_cluster.png", path = out_path, width = 4, height = 2, dpi = 300)

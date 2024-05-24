@@ -1,0 +1,24 @@
+global: ## Global parameters are those who are the same across all study cases
+
+  feature: 
+
+  dir: ## Directories
+  path_in: 
+  
+  Wtdata.path: "/shared/ifbstor1/projects/rnaseqmva/TANG_Lab/Xin_data/Veh/"
+  WT_Project:  "WT_data_Microglia"
+  AZTdata.path: "/shared/ifbstor1/projects/rnaseqmva/TANG_Lab/Xin_data/AZT/"
+  AZT_Project:  "AZT_data_Microglia"
+
+  path_out: "../Microglia_subtypes_mic_scRNA-/findings/02_QC_strain_split/"
+
+  variables: ## 
+  batch: ["AZT", "WT"]
+  pca_dim: ["9", "20"]
+  res: ["0.5", "0.6", "0.7"]
+  plot_title:"int_mg"
+  strain: ["AZT","WT"] 
+  
+  filtering: 
+
+  standadisation: 

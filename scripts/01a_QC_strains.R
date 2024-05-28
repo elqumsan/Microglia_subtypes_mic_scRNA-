@@ -71,7 +71,7 @@ integrated.strain <- integrated.strain %>%
       FindNeighbors(reduction = "pca", dims = 1:pca_dim) %>%
       FindClusters(resolution = 0.5)
 
-res="res05" # specify which rresolution used to cluster cells
+res="res05" # specify which resolution used to cluster cells
 
 # check dimension reduction
 
@@ -84,4 +84,47 @@ ggsave(paste(path,"_", res, "DimPlot3", ".png", sep = ""), units = "in", width =
 
 # DimPlot(integrated.strain, reduction = "umap", label = TRUE, pt.size = 0.001, split.by = "seurat_clusters")
 
-QC_plot(integrated.strain@meta.data)
+###### QC: violin plot of nfeatures_RNA, percent.mt, percent.ribo for each cluster
+p_QC <-c("nFeature_RNA", "percent.mt", "percent.ribo") %>% map(~QC_plot(integrated.strain@meta.data, .))
+p <-plot_grid(plotlist = p_QC, ncol = 1, align = "hv")
+title <- ggdraw()+ draw_label(paste(global_var$global$strain,global_var$global$round, global_var$global$res, "QC", sep = " "), fontface = 'bold')
+plot_grid(title, p, ncol = 1, rel_heights = c(0.1,1))
+ggsave(paste(global_var$global$path_out, global_var$global$strain,"_", global_var$global$round, "_", global_var$global$res, "_", "QC.png", sep = "" ), 
+       units = "in" , width = 10, height = 5, dpi = 150 )
+
+##### Find cluster markers 
+integrated_joint <- JoinLayers(integrated.strain)
+
+integrated_markers <-FindAllMarkers(integrated_joint, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, max.cells.per.ident = 300 )
+integrated_markers <- integrated_markers %>% rownames_to_column(var = "symbol")
+
+## save cell metadata and marker info into rda
+meta <- integrated.strain@meta.data %>% select(-starts_with("ribo_"))
+save(meta, integrated_markers, file = paste(global_var$global$path_data,"Meta_Markers.rda", sep = "") )
+
+##### Do NOT build into function 
+### Check cell proportions
+prop.table(table(Idents(integrated.strain),integrated.strain$orig.ident), margin= 2)
+sum_table <- integrated.strain@meta.data %>% group_by(seurat_clusters) %>%
+          summarise(N=n(),
+                    med_nCount_RNA=median(nCount_RNA),
+                    med_nFeature_RNA=median(nFeature_RNA),
+                    med_percent.mt=median(percent.mt),
+                    med_percent.ribo=median(percent.ribo))
+
+### check cell type for some cluster (check selected cluster, don't need to check all)
+markers_top <- integrated_markers %>% group_by(cluster) %>% top_n(n = 20, wt = avg_log2FC)
+gene_list <- markers_top %>% filter(cluster == 5) %>% select(symbol) %>% unlist()
+results = CMenrich(gene.list = gene_list, species = 'mouse')
+DT::datatable(results$enrichments)
+results$genes[[1]]
+
+
+#############
+### round 2: just microglia
+
+round = "r3_mg"
+# use integrated_strain  result from clustering resolusion = 0.6
+
+mg_strain <-subset(integrated.strain, idents = c(0:6, 8:10))
+what_dims(integrated.strain = mg_strain, path = global_var$global$path_data)

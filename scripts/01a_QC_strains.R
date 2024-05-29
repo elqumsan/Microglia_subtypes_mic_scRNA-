@@ -46,13 +46,15 @@ integrated_object$percent.ribo <- PercentageFeatureSet(integrated_object,feature
 
 
 ####### All myeloid cells 
-path= paste("../Microglia_subtypes_mic_scRNA-/findings/01a_QC_strains/", "/",sep = "")
+# path= paste("../Microglia_subtypes_mic_scRNA-/findings/01a_QC_strains/", "/",sep = "")
 
 integrated_object <- integrated_object %>% NormalizeData() 
 integrated.strain <- subset(integrated_object ) %>% NormalizeData()
 
-integrated.strain <- AddModuleScore(object = integrated.strain@assays$RNA, features = ribo.genes)
+ integrated.strain <- JoinLayers(integrated.strain)
 
+ integrated.strain <- AddModuleScore(object = integrated.strain, features = ribo.genes)
+ 
 integrated.strain<- integrated.strain %>% NormalizeData() %>%
   FindVariableFeatures(selection.method = "vst", nfeatures = 3000) %>%
   ScaleData(vars.to.regress = c("batch","ribo.genes", "percent.mt", "nFeature_RNA")) %>%
@@ -61,7 +63,7 @@ integrated.strain <- JackStraw(integrated.strain, num.replicate = 30, dims = 30)
 integrated.strain<-ScoreJackStraw(integrated.strain,dims = 1:30)
 
 ElbowPlot(integrated.strain,ndims = 30) + ggtitle(label = paste("AZT", sep = ""))
-ggsave(paste(path,"ElbowPlot", ".png", sep = "" ), width = 7, height = 4, dpi = 150)
+ggsave(paste(global_var$global$Path_QC_Strain_findings,"ElbowPlot", ".png", sep = "" ), width = 7, height = 4, dpi = 150)
 print(integrated.strain[["pca"]], dims = 1:30, nfeatures = 30)
 
 # Choose dimensions of PCA after checking ElbowPlot and positive genes in each Clusters
@@ -77,10 +79,10 @@ res="res05" # specify which resolution used to cluster cells
 
 DimPlot(integrated.strain, reduction = "umap", label = TRUE, pt.size = 0.001) +
   ggtitle(label = "AZT & WT") + coord_fixed()
-ggsave(paste(path, "DimPlot1",".png", sep = ""), units = "in", width= 7.3 , height = 7, dpi= 150)
+ggsave(paste(global_var$global$Path_QC_Strain_findings, "DimPlot1",".png", sep = ""), units = "in", width= 7.3 , height = 7, dpi= 150)
 
 DimPlot(integrated.strain, reduction = "umap" ,label = FALSE, group.by = "Strain", pt.size = 0.001 )
-ggsave(paste(path,"_", res, "DimPlot3", ".png", sep = ""), units = "in", width = 7.3, height = 7, dpi = 150)
+ggsave(paste(global_var$global$Path_QC_Strain_findings, res, "_", "DimPlot3", ".png", sep = ""), units = "in", width = 7.3, height = 7, dpi = 150)
 
 # DimPlot(integrated.strain, reduction = "umap", label = TRUE, pt.size = 0.001, split.by = "seurat_clusters")
 
@@ -89,7 +91,7 @@ p_QC <-c("nFeature_RNA", "percent.mt", "percent.ribo") %>% map(~QC_plot(integrat
 p <-plot_grid(plotlist = p_QC, ncol = 1, align = "hv")
 title <- ggdraw()+ draw_label(paste(global_var$global$strain,global_var$global$round, global_var$global$res, "QC", sep = " "), fontface = 'bold')
 plot_grid(title, p, ncol = 1, rel_heights = c(0.1,1))
-ggsave(paste(global_var$global$path_out, global_var$global$strain,"_", global_var$global$round, "_", global_var$global$res, "_", "QC.png", sep = "" ), 
+ggsave(paste(global_var$global$Path_QC_Strain_findings, global_var$global$strain,"_", global_var$global$round, "_", global_var$global$res, "_", "QC.png", sep = "" ), 
        units = "in" , width = 10, height = 5, dpi = 150 )
 
 ##### Find cluster markers 
@@ -127,4 +129,34 @@ round = "r3_mg"
 # use integrated_strain  result from clustering resolusion = 0.6
 
 mg_strain <-subset(integrated.strain, idents = c(0:6, 8:10))
-what_dims(integrated.strain = mg_strain, path = global_var$global$path_data)
+mg.strain <- what_dims(object_type = mg_strain, path = global_var$global$Path_QC_Strain_findings , strain = global_var$global$strain, round = global_var$global$round )
+## choose pca dimension
+pca_dim <- 22
+
+# try resolution = 0.6
+mg.strain <- mg.strain %>%
+  RunUMAP(reduction = "pca", dims = 1:pca_dim ) %>%
+  FindNeighbors(reduction = "pca", dims = 1:pca_dim) %>%
+  FindClusters(resolution = 0.6)
+
+
+res ="res_06" # specify which resolution used to cluster cellls
+strain <- "AZT_WT"
+mg.markers <-  markers(object_type = mg.strain, path = global_var$global$Path_QC_Strain_findings, strain = global_var$global$strain, round = global_var$global$round, 
+                     res = res)
+
+# check cell proporations
+prop.table(table(Idents(mg.strain), mg.strain$Strain), margin = 2)  
+sum_table <- mg.strain@meta.data %>% group_by(seurat_clusters) %>%
+  summarise( N=n(),
+             med_nCount_RNA=median(nCount_RNA),
+             med_nFeature_RNA=median(nFeature_RNA),
+             med_percent.mt=median(percent.mt),
+             med_percent.ribo=median(percent.ribo))
+
+#### check cell type for some clusters (check selected clusters, don't need to check all)
+markers_top<- mg.markers %>% group_by(cluster) %>% top_n(n = 20, wt = avg_log2FC)
+gene_list <- markers_top %>% filter(cluster == 11) %>% select(symbol) %>% unlist()
+results= CMenrich(gene.list = gene_list, species = 'mouse')
+DT::datatable(results$enrichments)
+results$genes[[1]]

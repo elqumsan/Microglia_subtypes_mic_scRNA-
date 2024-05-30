@@ -1,5 +1,8 @@
-library(yaml)
+#### Integration Microglia
 
-global_var <- read_yaml(file = "../Microglia_subtypes_mic_scRNA-/00_project_parameters.yml" )
+library(tidyverse)
+library(cowplot)
+library(Seurat)
 
-
+source("../Microglia_subtypes_mic_scRNA-/Functions/norm_scale_dim_cluster_qc.R")
+meta <- readRDS("../Microglia_subtypes_mic_scRNA-/data/Meta_Markers.rds")

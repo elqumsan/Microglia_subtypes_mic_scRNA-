@@ -23,9 +23,9 @@ AZT_object <- CreateSeuratObject(counts = AZTdata, project = "Microglia subtypes
 
 integrated_object <-  merge(WT_object, y = AZT_object, add.cell.ids = c("WT", "AZT"), merge.data= TRUE)
 
-integrated_object[["Strain"]] <- factor(integrated_object@meta.data$orig.ident, levels = strain)
-integrated_object$Strain <- str_replace(integrated_object$Strain,pattern = "Microglia subtypes_WT", replacement = "WT" )
-integrated_object$Strain <- str_replace(integrated_object$Strain, pattern ="Microglia subtypes_AZT", replacement = "AZT" )
+integrated_object[["strain"]] <- factor(integrated_object@meta.data$orig.ident)
+integrated_object$strain <- str_replace(integrated_object$strain, pattern = "Microglia subtypes_WT", replacement = "WT" )
+integrated_object$strain <- str_replace(integrated_object$strain,  pattern ="Microglia subtypes_AZT", replacement = "AZT" )
 
 integrated_object[["percent.mt"]] <-PercentageFeatureSet(integrated_object, pattern = "^MT-")
 
@@ -57,7 +57,7 @@ integrated.strain <- subset(integrated_object ) %>% NormalizeData()
  
 integrated.strain<- integrated.strain %>% NormalizeData() %>%
   FindVariableFeatures(selection.method = "vst", nfeatures = 3000) %>%
-  ScaleData(vars.to.regress = c("batch","ribo.genes", "percent.mt", "nFeature_RNA")) %>%
+  ScaleData(vars.to.regress = c("batch","ribo.genes", "percent.mt", "nFeature_RNA", "strain")) %>%
   RunPCA()
 integrated.strain <- JackStraw(integrated.strain, num.replicate = 30, dims = 30)
 integrated.strain<-ScoreJackStraw(integrated.strain,dims = 1:30)
@@ -102,7 +102,10 @@ integrated_markers <- integrated_markers %>% rownames_to_column(var = "symbol")
 
 ## save cell metadata and marker info into rda
 meta <- integrated.strain@meta.data %>% select(-starts_with("ribo_"))
-save(meta, integrated_markers, file = paste(global_var$global$path_data,"Meta_Markers.rda", sep = "") )
+
+meta_integrated_markers <-merge(meta, y= integrated_markers, add.cell.idec= c("meta", "marker"), Project = "meta_markers"  )
+
+# save(meta, integrated_markers, file = paste(global_var$global$path_data,"Meta_Markers.rda", sep = "") )
 
 ##### Do NOT build into function 
 ### Check cell proportions

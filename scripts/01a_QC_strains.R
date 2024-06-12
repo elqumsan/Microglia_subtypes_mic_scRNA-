@@ -29,7 +29,7 @@ integrated_object$strain <- str_replace(integrated_object$strain,  pattern ="Mic
 
 integrated_object[["percent.mt"]] <-PercentageFeatureSet(integrated_object, pattern = "^MT-")
 
-integrated_object <- subset(integrated_object, subset = nFeature_RNA > 600 & percent.mt < 8)
+# integrated_object <- subset(integrated_object, subset = nFeature_RNA > 600 & percent.mt < 8)
 
 
 
@@ -42,6 +42,14 @@ integrated_object <- subset(integrated_object, subset = nFeature_RNA > 600 & per
 
 ribo.genes <- grep(pattern = "^Rp[s1][[:digit:]]", x = rownames(integrated_object@assays$RNA), value = TRUE)
 integrated_object$percent.ribo <- PercentageFeatureSet(integrated_object,features = ribo.genes)
+
+
+#some of Microglia genes list ( "lfit3","lfitm3", "lrf7","Hexb" ,"Rps21", "Rps24","Lpl","Apoe","Ccl4","Ccl3", "C3ar1", "Stmn1","Top2a", "Birc5")
+
+microglia.gene.list <-  c(  "Cx3cr1", "Ctss", "Tmem119", "P2ry12" ,"Cd81" ,"Cst3","Cst7")
+
+integrated_object$percent.microglia <- PercentageFeatureSet(integrated_object, features = microglia.gene.list)
+
 
 
 
@@ -57,11 +65,13 @@ integrated.strain <- subset(integrated_object ) %>% NormalizeData()
  
 integrated.strain<- integrated.strain %>% NormalizeData() %>%
   FindVariableFeatures(selection.method = "vst", nfeatures = 3000) %>%
-  ScaleData(vars.to.regress = c("batch","ribo.genes", "percent.mt", "nFeature_RNA", "strain")) %>%
+  ScaleData(vars.to.regress = c("batch","ribo.genes", "percent.mt", "nFeature_RNA", "strain","percent.microglia")) %>%
   RunPCA()
 integrated.strain <- JackStraw(integrated.strain, num.replicate = 30, dims = 30)
 integrated.strain<-ScoreJackStraw(integrated.strain,dims = 1:30)
 
+
+#######################
 ElbowPlot(integrated.strain,ndims = 30) + ggtitle(label = paste("AZT", sep = ""))
 ggsave(paste(global_var$global$Path_QC_Strain_findings,"ElbowPlot", ".png", sep = "" ), width = 7, height = 4, dpi = 150)
 print(integrated.strain[["pca"]], dims = 1:30, nfeatures = 30)
@@ -115,7 +125,8 @@ sum_table <- integrated.strain@meta.data %>% group_by(seurat_clusters) %>%
                     med_nCount_RNA=median(nCount_RNA),
                     med_nFeature_RNA=median(nFeature_RNA),
                     med_percent.mt=median(percent.mt),
-                    med_percent.ribo=median(percent.ribo))
+                    med_percent.ribo=median(percent.ribo),
+                    med_percent.migroglia=median(percent.microglia))
 
 ### check cell type for some cluster (check selected cluster, don't need to check all)
 markers_top <- integrated_markers %>% group_by(cluster) %>% top_n(n = 20, wt = avg_log2FC)
@@ -149,13 +160,14 @@ mg.markers <-  markers(object_type = mg.strain, path = global_var$global$Path_QC
                      res = res)
 
 # check cell proporations
-prop.table(table(Idents(mg.strain), mg.strain$Strain), margin = 2)  
+prop.table(table(Idents(mg.strain), mg.strain$strain), margin = 2)  
 sum_table <- mg.strain@meta.data %>% group_by(seurat_clusters) %>%
   summarise( N=n(),
              med_nCount_RNA=median(nCount_RNA),
              med_nFeature_RNA=median(nFeature_RNA),
              med_percent.mt=median(percent.mt),
-             med_percent.ribo=median(percent.ribo))
+             med_percent.ribo=median(percent.ribo),
+             med_percent.microglia=median(percent.microglia))
 
 #### check cell type for some clusters (check selected clusters, don't need to check all)
 markers_top<- mg.markers %>% group_by(cluster) %>% top_n(n = 20, wt = avg_log2FC)

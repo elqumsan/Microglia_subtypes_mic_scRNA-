@@ -61,7 +61,7 @@ integrated.strain <- subset(integrated_object ) %>% NormalizeData()
 
  integrated.strain <- JoinLayers(integrated.strain)
 
- integrated.strain <- AddModuleScore(object = integrated.strain, features = ribo.genes)
+ integrated.strain <- AddModuleScore(object = integrated.strain, features = microglia.gene.list)
  
 integrated.strain<- integrated.strain %>% NormalizeData() %>%
   FindVariableFeatures(selection.method = "vst", nfeatures = 3000) %>%

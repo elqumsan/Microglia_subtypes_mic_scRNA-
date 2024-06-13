@@ -15,7 +15,7 @@ prop.table(table(Idents(integrated_object),integrated_object$Strain), margin = 2
 # generate meta data, 
 integrated.meta <- mg.strain@meta.data %>%
   mutate(strain = factor(strain, levels = c("AZT","WT")),
-         new_clusters= ifelse(seurat_clusters %in% 0:5, "H" ,as.character(seurat_clusters)),
+         new_clusters= ifelse(seurat_clusters %in% 0:0, "H" ,as.character(seurat_clusters)),
          new_clusters=factor(new_clusters, levels = c("1", "2","3","4", "5", "6", "7"))) %>%
   group_by(strain , new_clusters) %>%
   arrange(strain) %>%
@@ -30,7 +30,8 @@ p <- ggplot(integrated.meta, aes(y=N, x=strain , fill= new_clusters )) +
         axis.title = element_blank(),
         strip.text = element_blank(),
         axis.ticks.x = element_blank(),
-        axis.line.x =  element_blank()
+        axis.line.x =  element_blank(),
+        legend.position = "bottom"
       )
 ggsave(paste(global_var$global$path_microglai_statistics, "fraction_replicates_seperated.png", sep = "/"), p , width = 3.5 , height = 5 , units = "in")
 
@@ -65,4 +66,38 @@ p <- integrated.meta.stat %>%
         legend.position = "bottom"
         )
 
-  ggsave(paste(global_var$global$path_microglai_statistics, "cluster_box_all.png", sep = "/"), p , width = 4, height = 10, units = "in")
+ggsave(paste(global_var$global$path_microglai_statistics, "cluster_box_all.png", sep = "/"), p , width = 4, height = 10, units = "in")
+
+
+####### Perform two-way ANOVA to determine the effect of strain on the percent of microglia subclusters
+
+clusters <- unique(integrated.meta.stat$new_clusters) %>% as.list()
+data  = integrated.meta.stat %>%  filter(new_clusters %in% clusters[[1]])
+aov_object <-aov( integrated.meta.stat$Percent ~ integrated.meta.stat$new_clusters*integrated.meta.stat$med_percent.microglia, data = data)
+aov.pvals <- summary(aov_object)
+aov.pvals <- aov.pvals %>% t()
+
+
+######### check the statistics on nFeature, percent of microglia, and percent of ribosomal genes for each cluster 
+
+#### nFeature
+aov_stat <- aov(Med_nFeature ~ new_clusters, data = integrated.meta.stat)
+aov_table <-TukeyHSD(aov_stat) %>% .$new_clusters %>% data.frame() %>% rownames_to_column(var = "comparison") %>%
+  mutate(comparison = paste(" ", comparison , sep = ""), Significance=ifelse(p.adj <0.05, "S", "NS"))
+write_delim(aov_table, path = paste(global_var$global$path_microglai_statistics, "Med_nFeature_comp_cluster.txt", sep = "/"), delim = "\t")
+filter(aov_table, Significance == "S")
+
+
+###### percent of mitochodria
+aov_stat = aov(Med_percent_mt ~ new_clusters, data = integrated.meta.stat)
+aov_table <- TukeyHSD(aov_stat) %>% .$new_clusters %>% data_frame() %>% rownames_to_column(var = "comparison") %>%
+  mutate(comparison = paste(" ", comparison, sep = " "), Significance=ifelse("p.adj" < 0.05 , "S", "NS"))
+filter(aov_table, Significance =="S")
+
+#write_delim(aov_table, path = paste(global_var$global$path_microglai_statistics, "Med_percent_mt_comp_cluster.txt", sep = "/"), delim = "\t")
+
+################## percent of Microglia
+aov_stat = aov(med_percent.microglia ~ new_clusters, data = integrated.meta.stat)
+
+aov_table <- TukeyHSD(aov_stat) %>% .$new_clusters %>% data.frame() %>% rownames_to_column(var =  "comparison ") %>%
+  mutate(comparison = paste(" ", comparison, sep = " "), Significance=ifelse("p.adj" < 0.05 , "S", "NS"))

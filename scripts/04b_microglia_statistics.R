@@ -1,6 +1,9 @@
 library(tidyverse)
 library(cowplot)
 library(Seurat)
+library(destiny)
+library(SingleCellExperiment)
+library(scater)
 
 ### load object
 DefaultAssay(integrated_object) <- "RNA"
@@ -83,15 +86,16 @@ aov.pvals <- aov.pvals %>% t()
 #### nFeature
 aov_stat <- aov(Med_nFeature ~ new_clusters, data = integrated.meta.stat)
 aov_table <-TukeyHSD(aov_stat) %>% .$new_clusters %>% data.frame() %>% rownames_to_column(var = "comparison") %>%
-  mutate(comparison = paste(" ", comparison , sep = ""), Significance=ifelse(p.adj <0.05, "S", "NS"))
+  mutate(comparison = paste(" ", comparison , sep = ""), Significance=ifelse(p.adj < 0.05, "S", "NS"))
 write_delim(aov_table, path = paste(global_var$global$path_microglai_statistics, "Med_nFeature_comp_cluster.txt", sep = "/"), delim = "\t")
 filter(aov_table, Significance == "S")
 
 
 ###### percent of mitochodria
 aov_stat = aov(Med_percent_mt ~ new_clusters, data = integrated.meta.stat)
-aov_table <- TukeyHSD(aov_stat) %>% .$new_clusters %>% data_frame() %>% rownames_to_column(var = "comparison") %>%
-  mutate(comparison = paste(" ", comparison, sep = " "), Significance=ifelse("p.adj" < 0.05 , "S", "NS"))
+aov_table <- TukeyHSD(aov_stat) %>% .$new_clusters %>% data.frame() %>% rownames_to_column(var = "comparison") %>%
+  mutate(comparison = paste(" ", comparison, sep = " "), Significance=ifelse(p.adj < 0.05 , "S", "NS"))
+write_delim(aov_table, path = paste(global_var$global$path_microglai_statistics, "Med__percent_mitochondria.txt", sep = "/"), delim = "\t")
 filter(aov_table, Significance =="S")
 
 #write_delim(aov_table, path = paste(global_var$global$path_microglai_statistics, "Med_percent_mt_comp_cluster.txt", sep = "/"), delim = "\t")
@@ -99,5 +103,52 @@ filter(aov_table, Significance =="S")
 ################## percent of Microglia
 aov_stat = aov(med_percent.microglia ~ new_clusters, data = integrated.meta.stat)
 
-aov_table <- TukeyHSD(aov_stat) %>% .$new_clusters %>% data.frame() %>% rownames_to_column(var =  "comparison ") %>%
-  mutate(comparison = paste(" ", comparison, sep = " "), Significance=ifelse("p.adj" < 0.05 , "S", "NS"))
+aov_table <- TukeyHSD(aov_stat) %>% .$new_clusters %>% data.frame() %>% rownames_to_column(var =  "comparison") %>%
+  mutate(comparison = paste(" ", comparison, sep = " "), Significance=ifelse(p.adj < 0.05 , "S", "NS"))
+write_delim(aov_table, path = paste( global_var$global$path_microglai_statistics, "med_percent.microglia.txt", sep = "/"), delim= "\t")
+
+#######################   Pseudotime analysis (diffusion map ) 
+##################### too many cells for diffusion map, need sampling 
+
+integrated.strain$final_clusters <-ifelse(integrated.strain$seurat_clusters %in% 0:0, "H", 
+       integrated.strain$seurat_clusters %>% as.character())
+
+sampling <- integrated.strain@meta.data %>% 
+              rownames_to_column(var = "cell_ID") %>%
+              group_by(strain) %>%
+              sample_n(1000)  # take 1000 random cells from each group
+
+mg.small <- subset(integrated.strain, cells=sampling$cell_ID)
+
+mg.small <- as.SingleCellExperiment(mg.small)
+
+# Use diffusion map to calculate pseudotime
+pca <- reducedDim(mg.small)
+cellLables <- mg.small$seurat_clusters
+
+pca_tidy <- as.data.frame(pca) %>% rownames_to_column()
+
+rownames(pca)<- cellLables
+
+dm <- DiffusionMap(pca)
+
+dpt <- DPT(dm)
+
+mg.small$pseudotime_dpt <- rank(dpt$dpt)
+
+df <- colData(mg.small) %>% as.data.frame()
+
+df$final_clusters <- ifelse(df$seurat_clusters %in% 0:0, "H", df$seurat_clusters %>% as.character())
+
+
+ggplot(df, aes(pseudotime_dpt, fill= final_clusters)) +
+  geom_histogram(binwidth = 100 , color = "grey", size=0.1) +
+  facet_grid(strain ~., switch = "y") +
+  scale_y_continuous("count", position = "right") +
+  labs(x="DAM <- pseudotime -> Homostatic ") +
+  theme_bw() +
+  theme(text = element_text(family = "Arial", size = 10),
+        strip.text.y = element_text(size = 5),
+        axis.text = element_blank(),
+        
+        )

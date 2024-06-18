@@ -150,5 +150,8 @@ ggplot(df, aes(pseudotime_dpt, fill= final_clusters)) +
   theme(text = element_text(family = "Arial", size = 10),
         strip.text.y = element_text(size = 5),
         axis.text = element_blank(),
-        
+        axis.ticks = element_blank(),
+        axis.title.y.right = element_blank()
+       
         )
+ggsave(paste(global_var$global$path_microglai_statistics, "pseudotime.png", sep = "/"), width = 3.5 , height = 5.3 , units = "in", dpi = 600)

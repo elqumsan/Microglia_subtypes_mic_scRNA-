@@ -11,7 +11,7 @@ global: ## Global parameters are those who are the same across all study cases
   path_out: "../Microglia_subtypes_mic_scRNA-/findings/"
   Path_QC_Strain_findings: "../Microglia_subtypes_mic_scRNA-/findings/01a_QC_strains/"
   path_microglai_statistics: "../Microglia_subtypes_mic_scRNA-/findings/04b_microglia_statistics"
-  path_microglia_clustering: "../Microglia_subtypes_mic_scRNA-/findings/04a_microglia_clusterning"
+  path_microglia_clustering: "../Microglia_subtypes_mic_scRNA-/findings/04a_microglia_clustering"
   path_data: "../Microglia_subtypes_mic_scRNA-/data/"
 
   variables: ## 

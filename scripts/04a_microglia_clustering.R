@@ -56,5 +56,14 @@ Idents(integrated.strain) <- "final_clusters"
 
  ### Plot one gene
 p  <- genes %>% 
-   map(~FeaturePlot(integrated.strain, features = ., min.cutoff = "q9" ,label = TRUE, repel = FALSE, ncol = 2, order = TRUE))
+   map(~FeaturePlot(integrated.strain, features = ., min.cutoff = "q9" ,label = TRUE, repel = FALSE, ncol = 2, order = TRUE)+
+         coord_fixed() +
+         theme(axis.line = element_blank(),
+               axis.title = element_blank(),
+               axis.text = element_blank(),
+               axis.ticks = element_blank())
+       )
  
+(p[[1]]+p[[2]])/(p[[4]] +p[[5]])/(p[[3]])
+
+ggsave(paste(global_var$global$path_microglia_clustering, "/Feature_plot_all.png", sep = ""), units = "in", width = 10, height = 7 , dpi = 300)

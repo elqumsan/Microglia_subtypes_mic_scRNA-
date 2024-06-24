@@ -50,3 +50,11 @@ Idents(integrated.strain) <- "final_clusters"
 
  ggsave( file_name, units = "in", width = 5.5 , height = 5.5 , dpi = 300) 
  
+ ####### Feature plots of marker genes of microglia subclusters 
+ 
+ genes <- c("Tmem119", "Ctss", "Cx3cr1", "P2ry12","Stmn1")
+
+ ### Plot one gene
+p  <- genes %>% 
+   map(~FeaturePlot(integrated.strain, features = ., min.cutoff = "q9" ,label = TRUE, repel = FALSE, ncol = 2, order = TRUE))
+ 

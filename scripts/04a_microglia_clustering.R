@@ -67,3 +67,31 @@ p  <- genes %>%
 (p[[1]]+p[[2]])/(p[[4]] +p[[5]])/(p[[3]])
 
 ggsave(paste(global_var$global$path_microglia_clustering, "/Feature_plot_all.png", sep = ""), units = "in", width = 10, height = 7 , dpi = 300)
+
+
+### Check immediate early genes (IEG)
+### To verify that our microglia prepared by mechniacal dissociation 
+
+### Feature plots for IEG
+genes <- c("Fos", "Fosb", "Dusp1", "Nr4a1" , "Arc", "Egr1")
+
+p <- genes %>% map(~FeaturePlot(integrated.strain, features =., min.cutoff = "q9", label=TRUE, repel=TRUE, ncol= 2, order= FALSE)+
+                coord_fixed()+
+                theme(axis.line = element_blank(),
+                      axis.title = element_blank(),
+                      axis.ticks = element_blank()
+                      )
+                )
+
+(p[[1]]+p[[2]])/(p[[3]]+p[[4]])/(p[[5]]+p[[6]])
+
+ggsave(paste(global_var$global$path_microglia_clustering, "/Feature_plot_all_unordered.png", sep = ""), units = "in", width = 10 , height = 7, dpi = 300)
+
+
+#### Dot plot for IEG
+DotPlot(integrated.strain, features = genes) + RotatedAxis() +
+  theme(axis.title = element_blank(),
+        axis.text.y = element_text( face = "bold.italic") )+
+  scale_y_discrete(labels = function(x) str_wrap(x, width = 20)) +
+  coord_flip()
+ggsave(paste(global_var$global$path_microglia_clustering, "/Dotplot_IEG.png", sep = ""), units = "in", width = 6.1, height = 3.4, dpi = 300 )

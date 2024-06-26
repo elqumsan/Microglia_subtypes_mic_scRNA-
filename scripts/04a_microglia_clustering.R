@@ -95,3 +95,23 @@ DotPlot(integrated.strain, features = genes) + RotatedAxis() +
   scale_y_discrete(labels = function(x) str_wrap(x, width = 20)) +
   coord_flip()
 ggsave(paste(global_var$global$path_microglia_clustering, "/Dotplot_IEG.png", sep = ""), units = "in", width = 6.1, height = 3.4, dpi = 300 )
+
+
+###### check the gene number, percent of ribosomal genes and percent of mitochodrial genes in eaach cluster 
+
+
+QC_plot_single2 <- function(data , y ){
+  p <- ggplot(data, aes_string( x= "seurat_clusters" , y=y, color= "seurat_clusters"))+
+    geom_violin()+
+    geom_boxplot(width =0.07, outlier.shape = NA, color = "black", alpha=0.7) +
+    theme_bw() +
+    theme(legend.position = "none", axis.title.x = element_blank(), axis.ticks = element_blank())
+    return(p)
+}
+
+p_QC <- c("nFeature_RNA", "percent.mt", "percent.microglia") %>% map(~QC_plot_single2(integrated.strain@meta.data, .))
+
+p <- plot_grid(plotlist = p_QC, nrow = 3, ncol = 1 , align = "hv")
+plot_grid(p, nrow = 1, rel_heights = c(0.1, 1))
+
+ggsave(paste(global_var$global$path_microglia_clustering, "/all_microglia_integrated2.png", sep = ""), units = "in", width = 4.5, height = 3.5, dpi = 300)

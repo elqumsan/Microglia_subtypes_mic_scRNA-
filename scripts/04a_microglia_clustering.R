@@ -42,11 +42,11 @@ Idents(integrated.strain) <- "final_clusters"
            , "C3ar1", "Stmn1", "Top2a", "Birc5" ) 
  
  file_name <- paste(global_var$global$path_microglia_clustering, "/Dotplot_all_gene.png", sep = "")
- DotPlot(integrated.strain, features = genes) + RotatedAxis() +
+ DotPlot(integrated_joint, features = genes) + RotatedAxis() +
    theme(axis.title = element_blank()) +
    scale_y_discrete( labels = function(x) str_wrap(x, width = 20) ) +
    coord_flip() +
-   theme(axis.title = element_text( face = "bold.italic"))
+   theme(axis.text.y =  element_text( face = "bold.italic"))
 
  ggsave( file_name, units = "in", width = 5.5 , height = 5.5 , dpi = 300) 
  

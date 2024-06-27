@@ -12,7 +12,7 @@ j=0.6 #(resolution)
 
 ##### UMAP Plot
 
-DimPlot(integrated.strain, reduction = "umap", label = TRUE, pt.size = 0.001, label.size = 5) +
+DimPlot(integrated_joint, reduction = "umap", label = TRUE, pt.size = 0.001, label.size = 5) +
   coord_fixed() +
   theme(axis.title = element_blank(), legend.position = "none")
 ggsave(paste(global_var$global$path_microglia_clustering, "/" ,plot_title, "_", "umap_", i, "_res_", j, "_Dimplot_Strain_small", ".png", sep=""), units = "in", 
@@ -48,7 +48,7 @@ Idents(integrated.strain) <- "final_clusters"
    coord_flip() +
    theme(axis.text.y =  element_text( face = "bold.italic"))
 
- ggsave( file_name, units = "in", width = 5.5 , height = 5.5 , dpi = 300) 
+ ggsave( file_name,  dpi = 300) 
  
  ####### Feature plots of marker genes of microglia subclusters 
  
@@ -56,17 +56,19 @@ Idents(integrated.strain) <- "final_clusters"
 
  ### Plot one gene
 p  <- genes %>% 
-   map(~FeaturePlot(integrated.strain, features = ., min.cutoff = "q9" ,label = TRUE, repel = FALSE, ncol = 2, order = TRUE)+
+   map(~FeaturePlot(integrated_joint, features = ., min.cutoff = "q9" ,label = TRUE, repel = FALSE, ncol = 2, order = TRUE)+
          coord_fixed() +
          theme(axis.line = element_blank(),
                axis.title = element_blank(),
                axis.text = element_blank(),
-               axis.ticks = element_blank())
+               axis.ticks = element_blank())  +
+         scale_y_discrete(labels= function(x) str_wrap(x, width = 20)) 
+         
        )
  
 (p[[1]]+p[[2]])/(p[[4]] +p[[5]])/(p[[3]])
 
-ggsave(paste(global_var$global$path_microglia_clustering, "/Feature_plot_all.png", sep = ""), units = "in", width = 10, height = 7 , dpi = 300)
+ggsave(paste(global_var$global$path_microglia_clustering, "/Feature_plot_all_2.png", sep = ""), units = "in", width = 10, height = 7 , dpi = 300)
 
 
 ### Check immediate early genes (IEG)
@@ -75,17 +77,19 @@ ggsave(paste(global_var$global$path_microglia_clustering, "/Feature_plot_all.png
 ### Feature plots for IEG
 genes <- c("Fos", "Fosb", "Dusp1", "Nr4a1" , "Arc", "Egr1")
 
-p <- genes %>% map(~FeaturePlot(integrated.strain, features =., min.cutoff = "q9", label=TRUE, repel=TRUE, ncol= 2, order= FALSE)+
+p <- genes %>% map(~FeaturePlot(integrated_joint, features =., min.cutoff = "q9", label=TRUE, repel=TRUE, ncol= 2, order= FALSE)+
                 coord_fixed()+
                 theme(axis.line = element_blank(),
                       axis.title = element_blank(),
-                      axis.ticks = element_blank()
-                      )
+                      axis.ticks = element_blank() 
+                      ) +
+                  scale_y_discrete(labels = function(x) str_wrap(x, width = 20) )
+                  
                 )
 
 (p[[1]]+p[[2]])/(p[[3]]+p[[4]])/(p[[5]]+p[[6]])
 
-ggsave(paste(global_var$global$path_microglia_clustering, "/Feature_plot_all_unordered.png", sep = ""), units = "in", width = 10 , height = 7, dpi = 300)
+ggsave(paste(global_var$global$path_microglia_clustering, "/Feature_plot_all_unordered_2.png", sep = ""), units = "in", width = 10 , height = 7, dpi = 300)
 
 
 #### Dot plot for IEG
